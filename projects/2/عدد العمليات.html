@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>مكتب بريد دسوق ثاني - نظام التقارير</title>
+<style>
+:root{--primary:#1f6feb;--accent:#0b4f8a;--muted:#6b7280;--bg:#f3f6fb;--card:#ffffff}
+*{box-sizing:border-box}
+body{font-family:"Segoe UI", Tahoma, Arial, sans-serif;margin:0;background:var(--bg);color:#111;direction:rtl}
+header{background:linear-gradient(90deg,var(--primary),var(--accent));color:#fff;padding:14px 12px;text-align:center;font-size:20px;font-weight:700}
+.wrap{max-width:1180px;margin:18px auto;padding:12px}
+.card{background:var(--card);border-radius:10px;padding:14px;box-shadow:0 6px 20px rgba(15,23,42,0.06);margin-bottom:14px}
+.login-box{max-width:480px;margin:40px auto;padding:18px;text-align:center}
+input,select,textarea,button{font-size:15px;padding:8px;border-radius:8px;border:1px solid #d1d5db}
+button{background:var(--primary);color:#fff;border:none;cursor:pointer}
+button.secondary{background:#6b7280}
+button.danger{background:#d23a3a}
+.flex{display:flex;gap:12px;align-items:center}
+.space{display:flex;justify-content:space-between;align-items:center;gap:12px}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border:1px solid #e6e9ef;padding:8px;text-align:center;font-size:14px}
+th{background:var(--primary);color:#fff}
+.side{width:280px}
+.main{flex:1}
+.page-layout{display:flex;gap:16px;align-items:flex-start}
+.small{font-size:13px;color:var(--muted)}
+.footer-container {
+  width: 100%;
+  position: relative;
+  margin-top: 20px;
+}
+
+.footer{
+  width: 300%;                  /* الشريط طويل جدًا */
+  background: #0b4f8a;          /* اللون الأزرق */
+  color: #fff;
+  font-weight: 900;             
+  font-size: 24px;              
+  padding: 16px 20px;           
+  letter-spacing: 2px;          
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.3);
+  border-radius: 0;
+
+  display: flex;
+  justify-content: center;       /* النص في وسط الشريط */
+  align-items: center;           /* عموديًا في الوسط */
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3); 
+}
+
+
+
+
+
+
+
+
+.hidden{display:none}
+.totals-box{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.stat{background:#f8fafc;padding:10px;border-radius:8px;min-width:180px;text-align:center}
+.stat b{display:block;font-size:18px;margin-top:6px}
+.no-print{display:block}
+@media print{
+  button, .no-print, #settings, #dayControls, #resetAllBtn { display:none !important; }
+  body{background:white}
+  header{display:none}
+  .wrap{max-width:100%;margin:0;padding:0}
+  .card{box-shadow:none;border-radius:0}
+  .footer{display:none}
+}
+@media (max-width:900px){.page-layout{flex-direction:column}.side{width:100%}}
+.signature-line{margin-top:18px;border-top:1px solid #333;padding-top:6px;width:45%;display:inline-block;text-align:center}
+.sign-row{display:flex;justify-content:space-between;gap:12px;margin-top:18px}
+</style>
+</head>
+<body>
+
+<header id="pageHeader">مكتب بريد دسوق ثاني</header>
+
+<div class="wrap">
+
+  <div id="app">
+
+    <div class="page-layout">
+
+      <div class="side card">
+        <h4>📋 الموظفون و أرقام المكينات</h4>
+        <div id="empList" class="small" style="min-height:140px"></div>
+        <div style="margin-top:8px" class="no-print">
+          <button onclick="openSettings()">🔧 تعديل الموظفين</button>
+        </div>
+        <hr style="margin:12px 0">
+        <h4>ℹ️ ملخص سريع</h4>
+        <div id="quickSummary" class="small"></div>
+        <hr style="margin:12px 0">
+        <h4>📊 ملخص آخر 90 يوم لكل موظف</h4>
+        <div id="summary90" class="small" style="min-height:120px; overflow:auto"></div>
+      </div>
+
+      <div class="main">
+        <div class="card">
+          <div class="space" style="align-items:center;flex-wrap:wrap">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label class="small">📅 التاريخ</label>
+              <input type="date" id="dateInput">
+              <label class="small">📜 الأيام المحفوظة</label>
+              <select id="daySelect" onchange="loadDayFromSelect()" style="min-width:160px"></select>
+            </div>
+
+            <div id="dayControls" class="no-print" style="display:flex;gap:8px;align-items:center">
+              <button onclick="addRow()">➕ إضافة صف</button>
+              <button onclick="saveDay()">💾 حفظ اليوم</button>
+              <button onclick="printDay()">🖨️ طباعة</button>
+              <button id="resetAllBtn" class="danger" onclick="resetAll()">🗑️ مسح كل البيانات</button>
+              <button class="secondary" onclick="logout()" title="تسجيل خروج">🔒 خروج</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>التفاصيل اليومية</h3>
+          <div style="overflow:auto">
+            <table id="mainTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>اسم المكينة</th>
+                  <th>اسم الموظف</th>
+                  <th colspan="2">20</th>
+                  <th colspan="2">36/6</th>
+                  <th colspan="2">67</th>
+                  <th colspan="2">3/20</th>
+                  <th colspan="2">20/6</th>
+                  <th colspan="2">المشتريات</th>
+                </tr>
+                <tr>
+                  <th></th><th></th><th></th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+              <tfoot>
+                <tr style="background:#f8fafc;font-weight:700">
+                  <td colspan="3">إجمالي العمليات لكل خانة</td>
+                  <td id="sum_20_count">0</td><td id="sum_20_amount">0</td>
+                  <td id="sum_36_count">0</td><td id="sum_36_amount">0</td>
+                  <td id="sum_67_count">0</td><td id="sum_67_amount">0</td>
+                  <td id="sum_3_20_count">0</td><td id="sum_3_20_amount">0</td>
+                  <td id="sum_20_6_count">0</td><td id="sum_20_6_amount">0</td>
+                  <td id="sum_buy_count">0</td><td id="sum_buy_amount">0</td>
+                </tr>
+                <tr style="background:#eef6ff;font-weight:800">
+                  <td colspan="13" style="text-align:left">الإجمالي العام (مجموع كل المبالغ)</td>
+                  <td id="grand_total" style="text-align:center">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <div class="totals-box no-print">
+            <div class="stat">
+              <div class="small">إجمالي اليوم (العمليات)</div>
+              <b id="today_ops">0</b>
+              <div class="small">إجمالي اليوم (جنيه)</div>
+              <b id="today_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">إجمالي كل الأيام المحفوظة (العمليات)</div>
+              <b id="all_ops">0</b>
+              <div class="small">إجمالي كل الأيام (جنيه)</div>
+              <b id="all_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">عدد العمليات خلال آخر 30 يومًا</div>
+              <b id="last30_ops">0</b>
+              <div class="small">جنيه خلال 30 يوم</div>
+              <b id="last30_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">عدد العمليات خلال آخر 90 يومًا</div>
+              <b id="last90_ops">0</b>
+              <div class="small">جنيه خلال 90 يوم</div>
+              <b id="last90_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">مسح بيانات أقدم من 3 شهور</div>
+              <button class="danger" onclick="deleteOlderThan90()">🧹 مسح بيانات 3 شهور</button>
+            </div>
+          </div>
+
+        </div>
+        
+
+
+      </div>
+    </div>
+  </div>
+
+  <div id="settings" class="card hidden">
+    <h3>🔐 تعديل الموظفين و المكينة</h3>
+    <p class="small">أدخل كلمة المرور للوصول إلى التحرير:</p>
+    <input id="settingsPass" type="password" placeholder="">
+    <button onclick="openSettingsEditor()">دخول</button>
+
+    <div id="settingsEditor" class="hidden" style="margin-top:12px">
+      <p class="small">اكتب كل موظف في سطر واحد مع رقم المكينات مفصول بشرطة (-) مثلًا:</p>
+      <textarea id="employeesText" rows="7" style="width:100%" placeholder="محمد - 90433112
+أحمد - 90433712"></textarea>
+      <div style="margin-top:8px">
+        <button onclick="saveEmployees()">💾 حفظ</button>
+        <button onclick="closeSettings()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="card no-print">
+  <h3>💾 النسخ الاحتياطي و الاسترجاع</h3>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+    <button onclick="backupData()">📥 تحميل نسخة احتياطية</button>
+    <input type="file" id="restoreFile" style="display:none" accept=".json" onchange="restoreData(event)">
+    <button onclick="document.getElementById('restoreFile').click()">📤 استرجاع نسخة</button>
+  </div>
+  
+</div>
+<div class="footer">
+  | © 2025 |<strong>Arsany Rafik</strong> | Made by 📬  نظام التقارير البريدية ✨
+</div>
+
+
+
+
+</div>
+
+<script>
+// Config
+const KEY_RECORDS = "dsq_records_v2";
+const KEY_EMPLOYEES = "dsq_employees_v2";
+const SETTINGS_PASSWORD = "arsany2008";
+const OFFICE_NAME = "مكتب بريد دسوق ثاني";
+const ACCS = [
+  {key:"20", label:"20"},
+  {key:"36", label:"36/6"},
+  {key:"67", label:"67"},
+  {key:"3_20", label:"3/20"},
+  {key:"20_6", label:"20/6"},
+  {key:"buy", label:"المشتريات"}
+];
+
+const $ = id => document.getElementById(id);
+let records = {};
+let employees = [];
+let rowCount = 0;
+
+// Init
+window.addEventListener('load', ()=>{
+  records = JSON.parse(localStorage.getItem(KEY_RECORDS) || "{}");
+  employees = JSON.parse(localStorage.getItem(KEY_EMPLOYEES) || "[]");
+  populateDaySelect();
+  renderEmployeesSidebar();
+  document.getElementById('app').classList.remove('hidden');
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('dateInput').value = today;
+  loadDay(today);
+  updateAllSummaries();
+});
+
+// Utilities
+function escapeHtml(s){ return String(s || "").replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+function round2(v){ return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+// Employees sidebar
+function renderEmployeesSidebar(){
+  employees = JSON.parse(localStorage.getItem(KEY_EMPLOYEES) || "[]");
+  const container = $("empList");
+  if(!employees || employees.length===0){
+    container.innerHTML = "<p class='small'>لم يتم إضافة موظفين بعد. اضغط تعديل الموظفين لإضافة.</p>";
+    return;
+  }
+  container.innerHTML = employees.map(e => `<div style="margin-bottom:6px">👤 <strong>${escapeHtml(e.name)}</strong><br><span class="small">مكن: ${escapeHtml(e.machine)}</span></div>`).join("");
+}
+// ====== نسخة احتياطية ======
+function backupData(){
+  const data = {
+    records: records,
+    employees: employees
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "backup_dsq.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  alert("✅ تم تحميل النسخة الاحتياطية");
+}
+
+// ====== استرجاع النسخة ======
+function restoreData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.records) { localStorage.setItem(KEY_RECORDS, JSON.stringify(data.records)); records = data.records; }
+      if(data.employees) { localStorage.setItem(KEY_EMPLOYEES, JSON.stringify(data.employees)); employees = data.employees; }
+      renderEmployeesSidebar();
+      populateAllRowSelects();
+      populateDaySelect();
+      alert("✅ تم استرجاع النسخة بنجاح");
+    }catch(err){
+      alert("❌ خطأ في الملف");
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Settings
+function openSettings(){ $("settings").classList.remove('hidden'); $("settingsPass").value=""; $("settingsEditor").classList.add('hidden'); }
+function openSettingsEditor(){ 
+  if($("settingsPass").value!==SETTINGS_PASSWORD){ alert("كلمة المرور خاطئة"); return; }
+  $("settingsEditor").classList.remove('hidden');
+  $("employeesText").value = employees.map(e=>`${e.name} - ${e.machine}`).join("\n");
+}
+function saveEmployees(){
+  const lines = $("employeesText").value.trim().split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  employees = lines.map(l=>{
+    const [name,machine] = l.split("-").map(x=>x.trim());
+    return {name,machine};
+  });
+  localStorage.setItem(KEY_EMPLOYEES, JSON.stringify(employees));
+  renderEmployeesSidebar(); populateAllRowSelects();
+  alert("تم حفظ الموظفين والمكينات"); closeSettings();
+  update90DaySummary();
+}
+function closeSettings(){ $("settings").classList.add('hidden'); }
+
+// Add row
+function addRow(rowData){
+  const tbody = $("tableBody");
+  rowCount++;
+  const tr = document.createElement('tr'); tr.dataset.row=rowCount;
+  let machineOptions = `<option value="">-- اختر المكينة --</option>`;
+  employees.forEach(e=>machineOptions+=`<option value="${escapeHtml(e.machine)}">${escapeHtml(e.machine)}</option>`);
+  let empOptions = `<option value="">-- اختر الموظف --</option>`;
+  employees.forEach(e=>empOptions+=`<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`);
+  let inner = `<td>${rowCount}</td>
+  <td><select class="cell-machine" onchange="onCellChange(this)">${machineOptions}</select></td>
+  <td><select class="cell-employee" onchange="onCellChange(this)">${empOptions}</select></td>`;
+  ACCS.forEach(acc=>{
+    inner += `<td><input type="number" min="0" class="cell-count" data-acc="${acc.key}" onchange="onCellChange(this)"></td>`;
+    inner += `<td><input type="number" min="0" class="cell-amount" data-acc="${acc.key}" onchange="onCellChange(this)"></td>`;
+  });
+  tr.innerHTML = inner;
+  tbody.appendChild(tr);
+  if(rowData) setRowData(tr,rowData);
+}
+
+// Populate selects
+function populateAllRowSelects(){
+  document.querySelectorAll('.cell-machine').forEach(sel=>{
+    const val = sel.value;
+    sel.innerHTML = `<option value="">-- اختر المكينة --</option>` + employees.map(e=>`<option value="${escapeHtml(e.machine)}">${escapeHtml(e.machine)}</option>`).join("");
+    sel.value = val;
+  });
+  document.querySelectorAll('.cell-employee').forEach(sel=>{
+    const val = sel.value;
+    sel.innerHTML = `<option value="">-- اختر الموظف --</option>` + employees.map(e=>`<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`).join("");
+    sel.value = val;
+  });
+}
+
+// Row data
+function setRowData(tr,data){
+  tr.querySelector('.cell-machine').value = data.machine || "";
+  tr.querySelector('.cell-employee').value = data.employee || "";
+  ACCS.forEach(acc=>{
+    tr.querySelector(`.cell-count[data-acc="${acc.key}"]`).value = data[acc.key]?.count || 0;
+    tr.querySelector(`.cell-amount[data-acc="${acc.key}"]`).value = data[acc.key]?.amount || 0;
+  });
+}
+
+// Cell change
+function onCellChange(){ updateDaySummary(); update90DaySummary(); }
+
+// Save/load day
+function getCurrentDay(){ return $("dateInput").value; }
+function saveDay(){
+  const day = getCurrentDay();
+  const data = [];
+  document.querySelectorAll("#tableBody tr").forEach(tr=>{
+    const row = {machine:tr.querySelector('.cell-machine').value, employee:tr.querySelector('.cell-employee').value};
+    ACCS.forEach(acc=>{
+      row[acc.key] = {
+        count: parseInt(tr.querySelector(`.cell-count[data-acc="${acc.key}"]`).value || 0),
+        amount: round2(parseFloat(tr.querySelector(`.cell-amount[data-acc="${acc.key}"]`).value || 0))
+      };
+    });
+    data.push(row);
+  });
+  records[day] = data;
+  localStorage.setItem(KEY_RECORDS, JSON.stringify(records));
+  populateDaySelect();
+  updateAllSummaries();
+  alert("تم حفظ اليوم");
+}
+
+function loadDay(date){
+  $("tableBody").innerHTML = "";
+  rowCount=0;
+  const data = records[date]||[];
+  data.forEach(r=>addRow(r));
+  if(data.length===0) addRow();
+  updateDaySummary();
+  update90DaySummary();
+}
+
+function populateDaySelect(){
+  const sel = $("daySelect");
+  sel.innerHTML = "";
+  Object.keys(records).sort((a,b)=>b.localeCompare(a)).forEach(d=>{
+    const opt = document.createElement('option'); opt.value=d; opt.textContent=d; sel.appendChild(opt);
+  });
+}
+
+function loadDayFromSelect(){ loadDay($("daySelect").value); $("dateInput").value = $("daySelect").value; }
+
+// Update summaries
+function updateDaySummary(){
+  const sums = {};
+  ACCS.forEach(acc=>sums[acc.key]={count:0,amount:0});
+  let ops = 0, money=0;
+  document.querySelectorAll("#tableBody tr").forEach(tr=>{
+    ACCS.forEach(acc=>{
+      const c = parseInt(tr.querySelector(`.cell-count[data-acc="${acc.key}"]`).value || 0);
+      const a = round2(parseFloat(tr.querySelector(`.cell-amount[data-acc="${acc.key}"]`).value || 0));
+      sums[acc.key].count += c; sums[acc.key].amount += a;
+      ops += c; money += a;
+    });
+  });
+  ACCS.forEach(acc=>{
+    $( "sum_"+acc.key+"_count").textContent = sums[acc.key].count;
+    $( "sum_"+acc.key+"_amount").textContent = round2(sums[acc.key].amount);
+  });
+  $("grand_total").textContent = round2(money);
+  $("today_ops").textContent = ops;
+  $("today_money").textContent = round2(money);
+}
+
+function updateAllSummaries(){
+  const now = new Date();
+  let allOps=0, allMoney=0;
+  let last30Ops=0, last30Money=0;
+  let last90Ops=0, last90Money=0;
+
+  Object.keys(records).forEach(day=>{
+    const dayData = records[day] || [];
+    const diffDays = (now - new Date(day)) / (1000*60*60*24);
+
+    dayData.forEach(r=>{
+      ACCS.forEach(acc=>{
+        const count = parseInt(r[acc.key]?.count || 0);
+        const amount = parseFloat(r[acc.key]?.amount || 0);
+        allOps += count;
+        allMoney += amount;
+
+        if(diffDays <= 30){
+          last30Ops += count;
+          last30Money += amount;
+        }
+
+        // آخر 90 يوم لحسابات 20 و67 و buy فقط
+        if(diffDays <= 90 && (acc.key==="20" || acc.key==="67" || acc.key==="buy")){
+          last90Ops += count;
+          last90Money += amount;
+        }
+      });
+    });
+  });
+
+  $("all_ops").textContent = allOps;
+  $("all_money").textContent = round2(allMoney);
+  $("last30_ops").textContent = last30Ops;
+  $("last30_money").textContent = round2(last30Money);
+  $("last90_ops").textContent = last90Ops;
+  $("last90_money").textContent = round2(last90Money);
+
+  update90DaySummary();
+}
+
+
+// Update 90-day summary for sidebar
+function update90DaySummary(){
+  const now = new Date();
+  const empSummary = {};
+  employees.forEach(e=>empSummary[e.name]={count20:0,count67:0,countBuy:0,total:0});
+  Object.keys(records).forEach(day=>{
+    const diffDays = (now - new Date(day))/(1000*60*60*24);
+    if(diffDays<=90){
+      records[day].forEach(r=>{
+        const emp = r.employee;
+        if(emp && empSummary[emp]){
+          empSummary[emp].count20 += parseInt(r["20"]?.count||0);
+          empSummary[emp].count67 += parseInt(r["67"]?.count||0);
+          empSummary[emp].countBuy += parseInt(r["buy"]?.count||0);
+          empSummary[emp].total += parseInt(r["20"]?.count||0) + parseInt(r["67"]?.count||0) + parseInt(r["buy"]?.count||0);
+        }
+      });
+    }
+  });
+  const container = $("summary90");
+  let html = "<table style='width:100%;border-collapse:collapse;font-size:13px'>";
+  html += "<tr><th>الموظف</th><th>20</th><th>67</th><th>المشتريات</th><th>الإجمالي</th></tr>";
+  employees.forEach(e=>{
+    const s = empSummary[e.name];
+    html += `<tr><td>${escapeHtml(e.name)}</td><td>${s.count20}</td><td>${s.count67}</td><td>${s.countBuy}</td><td>${s.total}</td></tr>`;
+  });
+  html += "</table>";
+  container.innerHTML = html;
+}
+
+// Print
+function printDay(){
+  const day = getCurrentDay();
+  const data = records[day] || [];
+
+  // احسب إجمالي اليوم والعمليات السابقة
+  let totalTodayOps = 0;
+  let totalTodayMoney = 0;
+  let totalPrevOps = 0;
+  let totalPrevMoney = 0;
+
+  data.forEach(r=>{
+    ACCS.forEach(acc=>{
+      totalTodayOps += parseInt(r[acc.key]?.count || 0);
+      totalTodayMoney += parseFloat(r[acc.key]?.amount || 0);
+    });
+  });
+
+  Object.keys(records).forEach(d=>{
+    if(d !== day){
+      records[d].forEach(r=>{
+        ACCS.forEach(acc=>{
+          totalPrevOps += parseInt(r[acc.key]?.count || 0);
+          totalPrevMoney += parseFloat(r[acc.key]?.amount || 0);
+        });
+      });
+    }
+  });
+
+  let html = `<html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تقرير يوم ${day}</title>
+  <style>body{font-family:Segoe UI,Tahoma,Arial,sans-serif;direction:rtl}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #333;padding:6px;text-align:center}th{background:#1f6feb;color:#fff}</style></head><body>`;
+  html += `<h2>${OFFICE_NAME} - تقرير يوم ${day}</h2>`;
+  
+  html += `<table><thead><tr><th>#</th><th>اسم المكينة</th><th>اسم الموظف</th>`;
+  ACCS.forEach(acc=>{ html += `<th>${acc.label} عدد</th><th>${acc.label} جنيه</th>`; });
+  html += `</tr></thead><tbody>`;
+
+  let totalPerAcc = {}; ACCS.forEach(acc=>totalPerAcc[acc.key]={count:0,amount:0});
+  let totalMoney=0;
+  data.forEach((r,i)=>{
+    html += `<tr><td>${i+1}</td><td>${escapeHtml(r.machine)}</td><td>${escapeHtml(r.employee)}</td>`;
+    ACCS.forEach(acc=>{
+      const c = parseInt(r[acc.key]?.count || 0);
+      const a = round2(parseFloat(r[acc.key]?.amount || 0));
+      html += `<td>${c}</td><td>${a}</td>`;
+      totalPerAcc[acc.key].count += c;
+      totalPerAcc[acc.key].amount += a;
+      totalMoney += a;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody><tfoot><tr><td colspan="3">إجمالي العمليات لكل خانة</td>`;
+  ACCS.forEach(acc=>{ html += `<td>${totalPerAcc[acc.key].count}</td><td>${round2(totalPerAcc[acc.key].amount)}</td>`; });
+  html += `</tr><tr><td colspan="${3 + ACCS.length*2 -1}" style="text-align:left">الإجمالي العام (مجموع كل المبالغ)</td><td>${round2(totalMoney)}</td></tr></tfoot></table>`;
+
+  // إضافة الملخص أسفل الجدول
+  html += `<div style="margin-top:16px; font-size:14px;">
+    <p><strong>إجمالي العمليات اليوم:</strong> ${totalTodayOps}</p>
+    <p><strong>إجمالي المبلغ اليوم:</strong> ${round2(totalTodayMoney)}</p>
+    <p><strong>إجمالي العمليات السابقة:</strong> ${totalPrevOps}</p>
+    <p><strong>إجمالي المبلغ السابق:</strong> ${round2(totalPrevMoney)}</p>
+  </div>`;
+
+  const w = window.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
+
+
+// Delete older than 90
+function deleteOlderThan90(){
+  const now = new Date();
+  Object.keys(records).forEach(day=>{
+    if((now-new Date(day))/(1000*60*60*24)>90) delete records[day];
+  });
+  localStorage.setItem(KEY_RECORDS, JSON.stringify(records));
+  populateDaySelect();
+  updateAllSummaries();
+  alert("تم مسح بيانات أقدم من 3 شهور");
+}
+
+// Reset all
+function resetAll(){ 
+  if(confirm("هل أنت متأكد من مسح كل البيانات؟")){
+    localStorage.removeItem(KEY_RECORDS); 
+    localStorage.removeItem(KEY_EMPLOYEES); 
+    records={}; employees=[]; 
+    renderEmployeesSidebar(); populateDaySelect(); 
+    $("tableBody").innerHTML=""; rowCount=0; addRow(); 
+    updateAllSummaries(); alert("تم مسح كل البيانات") 
+  } 
+}
+// ====== نسخة احتياطية ======
+function backupData(){
+  const data = {
+    records: records,
+    employees: employees
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "backup_dsq.json";
+  a.click();
+  URL.revokeObjectURL(url);
+  alert("✅ تم تحميل النسخة الاحتياطية");
+}
+
+// ====== استرجاع النسخة ======
+function restoreData(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.records) { localStorage.setItem(KEY_RECORDS, JSON.stringify(data.records)); records = data.records; }
+      if(data.employees) { localStorage.setItem(KEY_EMPLOYEES, JSON.stringify(data.employees)); employees = data.employees; }
+      renderEmployeesSidebar();
+      populateAllRowSelects();
+      populateDaySelect();
+      alert("✅ تم استرجاع النسخة بنجاح");
+    }catch(err){
+      alert("❌ خطأ في الملف");
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+// Logout
+function logout(){ if(confirm("تسجيل خروج؟")){ location.reload(); } }
+
+</script>
+
+</body>
+</html>

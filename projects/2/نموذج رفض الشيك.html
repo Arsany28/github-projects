@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>نموذج رفض شيك</title>
+  <style>
+    /* ✅ ضبط الطباعة على ورقة A4 واحدة */
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    body {
+      font-family: "Tahoma", Arial, sans-serif;
+      margin: 0;
+      direction: rtl;
+      background: linear-gradient(135deg, #f1f3f6, #e4e7eb);
+      color: #222;
+    }
+
+    .wrap {
+      width: 190mm;
+      margin: 10mm auto;
+      background: #fff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .controls {
+      background: #004080;
+      color: #fff;
+      padding: 15px 20px;
+    }
+    .controls strong {
+      display: block;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+    .controls label {
+      display: inline-block;
+      min-width: 130px;
+      margin: 6px 0;
+    }
+    .controls input {
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      margin: 6px 0;
+    }
+    .controls button {
+      padding: 8px 16px;
+      margin: 8px 4px;
+      border: none;
+      border-radius: 6px;
+      background: #ffcc00;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .controls button:hover {
+      background: #ffd633;
+    }
+
+    .page {
+      padding: 10mm;
+      border-top: 4px solid #004080;
+      min-height: 250mm;
+      box-sizing: border-box;
+      page-break-inside: avoid;
+    }
+
+    .center { text-align: center; }
+    h1 { font-size: 22px; margin: 10px 0; color: #004080; }
+    h2 { font-size: 18px; margin: 6px 0; }
+    .row { margin: 10px 0; }
+    .label { display: inline-block; min-width: 180px; font-weight: bold; }
+    .value { display: inline-block; min-width: 320px; border-bottom: 1px dotted #333; padding: 0 6px; }
+    .signs { display: flex; justify-content: space-between; margin-top: 40px; padding: 0 20px; }
+    .signs div { width: 30%; text-align: center; }
+
+    /* ✅ فوتر أكبر وأوضح */
+    .footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 18px;
+      color: #333;
+      background: #e9ecef;
+      font-weight: bold;
+      border-top: 2px solid #ccc;
+      letter-spacing: 0.5px;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .controls, .footer { display: none; }
+      .wrap { width: 190mm; margin: 0 auto; box-shadow: none; }
+      .page { page-break-inside: avoid; overflow: hidden; }
+    }
+  </style>
+</head>
+<body onload="initNow()">
+  <div class="wrap">
+    <!-- 🔹 إدخال البيانات -->
+    <div class="controls">
+      <strong>إدخال البيانات:</strong><br>
+      <label>اسم المكتب:</label><input id="inOffice" type="text" style="width:300px"><br>
+      <label>رقم الشيك:</label><input id="inSheek" type="text"><br>
+      <label>المبلغ (جنيه.قرش):</label><input id="inAmount" type="text" placeholder="مثال: 1250 أو 1250.75">
+      <label>تاريخ الاستحقاق:</label><input id="inDue" type="date"><br>
+      <label>رقم الحساب:</label><input id="inAcc" type="text">
+      <label>نوع الحساب:</label><input id="inType" type="text" placeholder="جاري / توفير ..."><br>
+      <label>باسم:</label><input id="inName" type="text" style="width:300px"><br>
+      <button onclick="fillForm()">تحديث النموذج</button>
+      <button onclick="printForm()">طباعة</button>
+    </div>
+
+    <!-- 🔹 الصفحة -->
+    <div class="page">
+      <div class="center">
+        <h2>وزارة الاتصالات وتكنولوجيا المعلومات</h2>
+        <h2>الهيئة القومية للبريد</h2>
+        <h1>نموذج رفض شيك</h1>
+      </div>
+
+      <div class="center" style="margin:10px 0 20px 0;line-height:1.5">
+        <div>الإدارة العامة لبريد كفر الشيخ</div>
+        <div id="vOfficeHeader"></div>
+      </div>
+
+      <div class="row"><span class="label">التاريخ:</span><span class="value" id="vToday"></span></div>
+      <div class="row"><span class="label">رقم الشيك:</span><span class="value" id="vSheek"></span></div>
+      <div class="row"><span class="label">مبلغ الشيك (بالأرقام):</span><span class="value" id="vAmountNum"></span></div>
+      <div class="row"><span class="label">مبلغ الشيك (بالحروف):</span><span class="value" id="vAmountWords"></span></div>
+      <div class="row"><span class="label">تاريخ الاستحقاق:</span><span class="value" id="vDue"></span></div>
+      <div class="row"><span class="label">تاريخ تقديم الشيك:</span><span class="value" id="vPresented"></span></div>
+      <div class="row"><span class="label">رقم الحساب:</span><span class="value" id="vAcc"></span></div>
+      <div class="row"><span class="label">نوع الحساب:</span><span class="value" id="vType"></span></div>
+      <div class="row"><span class="label">باسم:</span><span class="value" id="vName"></span></div>
+
+      <div class="row" style="margin-top:15px">
+        <strong>سبب الرفض:</strong>
+        <span>لا يوجد رصيد كافي في حساب العميل</span>
+        <span id="vReasonTime" style="display:inline-block;margin-right:6px"></span>
+      </div>
+
+      <div class="signs">
+        <div>توقيع الموظف</div>
+        <div>توقيع المراجع</div>
+        <div>توقيع مدير المكتب</div>
+      </div>
+    </div>
+
+    <!-- 🔹 الفوتر -->
+    <div class="footer">Made by <strong>Arsany Rafik</strong> © 2025</div>
+  </div>
+
+<script>
+  const AR_DAYS = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+
+  function two(n){ return (n<10?"0":"")+n; }
+  function toArDigits(str){ return str.toString().replace(/\d/g,d=>"٠١٢٣٤٥٦٧٨٩"[d]); }
+
+  function formatArDate(d){
+    return `${AR_DAYS[d.getDay()]}، ${toArDigits(d.getDate())} ${AR_MONTHS[d.getMonth()]} ${toArDigits(d.getFullYear())}`;
+  }
+  function formatArTime(d){
+    let h = d.getHours(), m = two(d.getMinutes());
+    let period = h >= 12 ? "مساءً" : "صباحًا";
+    if(h===0) h=12; else if(h>12) h-=12;
+    return `${toArDigits(h)}:${toArDigits(m)} ${period}`;
+  }
+
+  function initNow(){
+    const now = new Date();
+    document.getElementById("vToday").textContent = formatArDate(now);
+    document.getElementById("vPresented").textContent = formatArDate(now);
+    document.getElementById("vReasonTime").textContent = `— اليوم: ${formatArDate(now)} / الساعة: ${formatArTime(now)}`;
+  }
+
+  function numberToWordsAr(num){
+    const ones = ["","واحد","اثنان","ثلاثة","أربعة","خمسة","ستة","سبعة","ثمانية","تسعة"];
+    const tens = ["","عشرة","عشرون","ثلاثون","أربعون","خمسون","ستون","سبعون","ثمانون","تسعون"];
+    const teens = ["أحد عشر","اثنا عشر","ثلاثة عشر","أربعة عشر","خمسة عشر","ستة عشر","سبعة عشر","ثمانية عشر","تسعة عشر"];
+    const scales = ["","ألف","مليون","مليار"];
+
+    if (num === 0) return "صفر جنيهاً فقط لا غير";
+
+    let [integer, fraction] = num.toString().split(".");
+    integer = parseInt(integer);
+    fraction = fraction ? parseInt(fraction.padEnd(2,"0")) : 0;
+
+    function convertHundreds(n){
+      let str="";
+      if(n>=100){ str+=ones[Math.floor(n/100)] ? ones[Math.floor(n/100)]+" مائة " : ""; n%=100; }
+      if(n>=20){ str+=(ones[n%10]?ones[n%10]+" و ":"")+tens[Math.floor(n/10)]; }
+      else if(n>=11){ str+=teens[n-11]; }
+      else if(n>0){ str+=ones[n]; }
+      return str.trim();
+    }
+
+    function convert(n){
+      if(n===0) return "";
+      let str="", scale=0;
+      let parts=[];
+      while(n>0){
+        let chunk=n%1000;
+        if(chunk) parts.unshift(convertHundreds(chunk)+" "+(scales[scale]||""));
+        n=Math.floor(n/1000);
+        scale++;
+      }
+      return parts.join(" و ").trim();
+    }
+
+    let result = convert(integer)+" جنيهاً";
+    if(fraction>0) result += " و "+convert(fraction)+" قرشاً";
+    return result + " فقط لا غير";
+  }
+
+  function fillForm(){
+    const now=new Date();
+    document.getElementById("vToday").textContent = formatArDate(now);
+    document.getElementById("vPresented").textContent = formatArDate(now);
+    document.getElementById("vReasonTime").textContent = `— اليوم: ${formatArDate(now)} / الساعة: ${formatArTime(now)}`;
+
+    document.getElementById("vSheek").textContent = document.getElementById("inSheek").value;
+    const amountStr = document.getElementById("inAmount").value.trim();
+    const amountNum = amountStr ? Number(amountStr.replace(/,/g,"")) : 0;
+    document.getElementById("vAmountNum").textContent = toArDigits(amountStr || "0")+" جنيه";
+    document.getElementById("vAmountWords").textContent = numberToWordsAr(amountNum);
+    const due = document.getElementById("inDue").value;
+    document.getElementById("vDue").textContent = due ? toArDigits(due.split("-").reverse().join("/")) : "";
+    document.getElementById("vAcc").textContent = document.getElementById("inAcc").value;
+    document.getElementById("vType").textContent = document.getElementById("inType").value;
+    document.getElementById("vName").textContent = document.getElementById("inName").value;
+    document.getElementById("vOfficeHeader").textContent = document.getElementById("inOffice").value || "";
+  }
+
+  function printForm(){
+    fillForm();
+    window.print();
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+// تحميل المستخدمين من localStorage أو تهيئة كمصفوفة فارغة
+let users = JSON.parse(localStorage.getItem('users') || '[]');
+
+function saveUsers() {
+  localStorage.setItem('users', JSON.stringify(users));
+}
+
+function addUser() {
+  const serial = document.getElementById("serial").value.trim();
+  const name = document.getElementById("name").value.trim();
+  const nid = document.getElementById("nid").value.trim();
+  const visa = document.getElementById("visa").value.trim();
+
+  if (!serial || !name || !nid || !visa) {
+    alert("يرجى ملء كل الحقول");
+    return;
+  }
+
+  if (!/^\d+$/.test(serial) || !/^\d+$/.test(nid) || !/^\d+$/.test(visa)) {
+    alert("يجب إدخال أرقام فقط في الرقم المسلسل والرقم القومي ورقم الفيزا");
+    return;
+  }
+
+  if (users.find(u => u.nid === nid || u.visa === visa || u.serial === serial)) {
+    alert("البيانات موجودة مسبقاً");
+    return;
+  }
+
+  const newUser = { serial, name, nid, visa };
+  users.push(newUser);
+  saveUsers();
+
+  alert("تم حفظ المستخدم بنجاح");
+
+  // إعادة ضبط الحقول
+  document.getElementById("serial").value = '';
+  document.getElementById("name").value = '';
+  document.getElementById("nid").value = '';
+  document.getElementById("visa").value = '';
+}
+
+function searchUser() {
+  const query = document.getElementById("searchQuery").value.trim().toLowerCase();
+  const resultDiv = document.getElementById("results");
+
+  users = JSON.parse(localStorage.getItem('users') || '[]'); // إعادة تحميل
+
+  const results = users.filter(user =>
+    user.name.toLowerCase().includes(query) ||
+    user.nid.includes(query) ||
+    user.visa.includes(query)
+  );
+
+  if (results.length === 0) {
+    resultDiv.innerHTML = "لا توجد نتائج.";
+  } else {
+    resultDiv.innerHTML = results.map(user => `
+      <div class="user-box">
+        رقم مسلسل: ${user.serial}<br>
+        الاسم: ${user.name}<br>
+        الرقم القومي: ${user.nid}<br>
+        رقم الفيزا: ${user.visa}<br>
+        <button onclick="deleteUser('${user.serial}')">تم التسليم (حذف)</button>
+      </div>
+    `).join('');
+  }
+}
+
+function deleteUser(serial) {
+  users = users.filter(user => user.serial !== serial);
+  saveUsers();
+  searchUser();
+}
