@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>مكتب بريد دسوق ثاني - نظام التقارير</title>
+<style>
+  :root{--primary:#1f6feb;--accent:#0b4f8a;--muted:#6b7280;--bg:#f3f6fb;--card:#ffffff}
+  *{box-sizing:border-box}
+  body{font-family:"Segoe UI", Tahoma, Arial, sans-serif;margin:0;background:var(--bg);color:#111;direction:rtl}
+  header{background:linear-gradient(90deg,var(--primary),var(--accent));color:#fff;padding:14px 12px;text-align:center;font-size:20px;font-weight:700}
+  .wrap{max-width:1180px;margin:18px auto;padding:12px}
+  .card{background:var(--card);border-radius:10px;padding:14px;box-shadow:0 6px 20px rgba(15,23,42,0.06);margin-bottom:14px}
+  .login-box{max-width:480px;margin:40px auto;padding:18px;text-align:center}
+  input,select,textarea,button{font-size:15px;padding:8px;border-radius:8px;border:1px solid #d1d5db}
+  button{background:var(--primary);color:#fff;border:none;cursor:pointer}
+  button.secondary{background:#6b7280}
+  button.danger{background:#d23a3a}
+  .flex{display:flex;gap:12px;align-items:center}
+  .space{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{border:1px solid #e6e9ef;padding:8px;text-align:center;font-size:14px}
+  th{background:var(--primary);color:#fff}
+  .side{width:280px}
+  .main{flex:1}
+  .page-layout{display:flex;gap:16px;align-items:flex-start}
+  .small{font-size:13px;color:var(--muted)}
+  .footer{margin-top:10px;text-align:center;color:#666;padding:8px}
+  .hidden{display:none}
+  .totals-box{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  .stat{background:#f8fafc;padding:10px;border-radius:8px;min-width:180px;text-align:center}
+  .stat b{display:block;font-size:18px;margin-top:6px}
+  .no-print{display:block}
+  /* print */
+  @media print{
+    button, .no-print, #login-wrap, #settings, #dayControls, #resetAllBtn { display:none !important; }
+    body{background:white}
+    header{display:none}
+    .wrap{max-width:100%;margin:0;padding:0}
+    .card{box-shadow:none;border-radius:0}
+    .footer{display:none}
+    /* ensure signature lines visible */
+    .print-signs{display:block; margin-top:24px}
+  }
+  @media (max-width:900px){.page-layout{flex-direction:column}.side{width:100%}}
+  .signature-line{margin-top:18px;border-top:1px solid #333;padding-top:6px;width:45%;display:inline-block;text-align:center}
+  .sign-row{display:flex;justify-content:space-between;gap:12px;margin-top:18px}
+</style>
+</head>
+<body>
+
+<header id="pageHeader">مكتب بريد دسوق ثاني</header>
+
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div id="login-wrap" class="card login-box">
+    <h3>تسجيل الدخول</h3>
+    <div style="max-width:420px;margin:auto;text-align:center">
+      <input id="loginUser" placeholder="اسم المستخدم" style="width:100%;margin-bottom:8px"><br>
+      <input id="loginPass" type="password" placeholder="كلمة المرور" style="width:100%;margin-bottom:12px"><br>
+      <div class="flex" style="justify-content:center">
+        <button onclick="doLogin()">دخول</button>
+      </div>
+      <p class="small" style="text-align:center;margin-top:8px">ادخل بيانات الدخول لفتح النظام</p>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+
+    <div class="page-layout">
+
+      <!-- side -->
+      <div class="side card">
+        <h4>📋 الموظفون و أرقام المكن</h4>
+        <div id="empList" class="small" style="min-height:140px"></div>
+        <div style="margin-top:8px" class="no-print">
+          <button onclick="openSettings()">🔧 تعديل الموظفين</button>
+        </div>
+        <hr style="margin:12px 0">
+        <h4>ℹ️ ملخص سريع</h4>
+        <div id="quickSummary" class="small"></div>
+      </div>
+
+      <!-- main -->
+      <div class="main">
+        <div class="card">
+          <div class="space" style="align-items:center;flex-wrap:wrap">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label class="small">📅 التاريخ</label>
+              <input type="date" id="dateInput">
+              <label class="small">📜 الأيام المحفوظة</label>
+              <select id="daySelect" onchange="loadDayFromSelect()" style="min-width:160px"></select>
+            </div>
+
+            <div id="dayControls" class="no-print" style="display:flex;gap:8px;align-items:center">
+              <button onclick="addRow()">➕ إضافة صف</button>
+              <button onclick="saveDay()">💾 حفظ اليوم</button>
+              <button onclick="printDay()">🖨️ طباعة</button>
+              <button id="resetAllBtn" class="danger" onclick="resetAll()">🗑️ مسح كل البيانات</button>
+              <button class="secondary" onclick="logout()" title="تسجيل خروج">🔒 خروج</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- table -->
+        <div class="card">
+          <h3>التفاصيل اليومية</h3>
+          <div style="overflow:auto">
+            <table id="mainTable">
+              <thead>
+                <tr>
+                  <th rowspan="2">#</th>
+                  <th rowspan="2">اسم المكنة</th>
+                  <th rowspan="2">اسم الموظف</th>
+                  <th colspan="2">20</th>
+                  <th colspan="2">36/6</th>
+                  <th colspan="2">67</th>
+                  <th colspan="2">3/20</th>
+                  <th colspan="2">20/6</th>
+                  <th colspan="2">المشتريات</th>
+                </tr>
+                <tr>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                  <th>عدد</th><th>جنيه</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+              <tfoot>
+                <tr style="background:#f8fafc;font-weight:700">
+                  <td colspan="3">إجمالي العمليات لكل خانة</td>
+                  <td id="sum_20_count">0</td><td id="sum_20_amount">0</td>
+                  <td id="sum_36_count">0</td><td id="sum_36_amount">0</td>
+                  <td id="sum_67_count">0</td><td id="sum_67_amount">0</td>
+                  <td id="sum_3_20_count">0</td><td id="sum_3_20_amount">0</td>
+                  <td id="sum_20_6_count">0</td><td id="sum_20_6_amount">0</td>
+                  <td id="sum_buy_count">0</td><td id="sum_buy_amount">0</td>
+                </tr>
+                <tr style="background:#eef6ff;font-weight:800">
+                  <td colspan="13" style="text-align:left">الإجمالي العام (مجموع كل المبالغ)</td>
+                  <td id="grand_total" style="text-align:center">0</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- totals blocks -->
+          <div class="totals-box no-print">
+            <div class="stat">
+              <div class="small">إجمالي اليوم (العمليات)</div>
+              <b id="today_ops">0</b>
+              <div class="small">إجمالي اليوم (جنيه)</div>
+              <b id="today_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">إجمالي كل الأيام المحفوظة (العمليات)</div>
+              <b id="all_ops">0</b>
+              <div class="small">إجمالي كل الأيام (جنيه)</div>
+              <b id="all_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">عدد العمليات خلال آخر 30 يومًا</div>
+              <b id="last30_ops">0</b>
+              <div class="small">جنيه خلال 30 يوم</div>
+              <b id="last30_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">عدد العمليات خلال آخر 90 يومًا</div>
+              <b id="last90_ops">0</b>
+              <div class="small">جنيه خلال 90 يوم</div>
+              <b id="last90_money">0</b>
+            </div>
+            <div class="stat">
+              <div class="small">مسح بيانات أقدم من 3 شهور</div>
+              <button class="danger" onclick="deleteOlderThan90()">🧹 مسح بيانات 3 شهور</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="footer card small">
+          Made by Arsany Rafik
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="settings" class="card hidden">
+    <h3>🔐 تعديل الموظفين و المكن</h3>
+    <p class="small">أدخل كلمة المرور للوصول إلى التحرير:</p>
+    <input id="settingsPass" type="password" placeholder="">
+    <button onclick="openSettingsEditor()">دخول</button>
+
+    <div id="settingsEditor" class="hidden" style="margin-top:12px">
+      <p class="small">اكتب كل موظف في سطر واحد مع رقم المكن مفصول بشرطة (-) مثلاً:</p>
+      <textarea id="employeesText" rows="7" style="width:100%" placeholder="محمد - 90433112
+أحمد - 90433712"></textarea>
+      <div style="margin-top:8px">
+        <button onclick="saveEmployees()">💾 حفظ</button>
+        <button onclick="closeSettings()">إغلاق</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* Keys & config */
+const KEY_RECORDS = "dsq_records_v2";
+const KEY_EMPLOYEES = "dsq_employees_v2";
+const SETTINGS_PASSWORD = "arsany2008";
+const LOGIN_USER = "admin";
+const LOGIN_PASS = "admin";
+const OFFICE_NAME = "مكتب بريد دسوق ثاني";
+
+const ACCS = [
+  {key:"20", label:"20"},
+  {key:"36", label:"36/6"},
+  {key:"67", label:"67"},
+  {key:"3_20", label:"3/20"},
+  {key:"20_6", label:"20/6"},
+  {key:"buy", label:"المشتريات"}
+];
+
+const $ = id => document.getElementById(id);
+
+let records = {};
+let employees = [];
+let rowCount = 0;
+
+/* init */
+window.addEventListener('load', ()=>{
+  records = JSON.parse(localStorage.getItem(KEY_RECORDS) || "{}");
+  employees = JSON.parse(localStorage.getItem(KEY_EMPLOYEES) || "[]");
+  populateDaySelect();
+  renderEmployeesSidebar();
+});
+
+/* Login */
+
+function doLogin(){
+  const u = $('loginUser').value.trim();
+  const p = $('loginPass').value.trim();
+  
+  if(u === LOGIN_USER && p === LOGIN_PASS){
+    $('login-wrap').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    const today = new Date().toISOString().slice(0,10);
+    $('dateInput').value = today;
+    renderEmployeesSidebar();
+    populateDaySelect();
+    loadDay(today);
+    updateAllSummaries();
+  } else {
+    alert("❌ اسم المستخدم أو كلمة المرور غير صحيحة.
+البيانات الصحيحة: admin / admin");
+  }
+}
+
+
+/* Settings */
+function openSettings(){
+  $('settings').classList.remove('hidden');
+  $('settingsPass').value = "";
+  $('settingsEditor').classList.add('hidden');
+}
+function openSettingsEditor(){
+  const pass = $('settingsPass').value;
+  if(pass !== SETTINGS_PASSWORD){ alert("كلمة المرور خاطئة"); return; }
+  $('settingsEditor').classList.remove('hidden');
+  const txt = employees.map(e => `${e.name} - ${e.machine}`).join("\n");
+  $('employeesText').value = txt;
+}
+function saveEmployees(){
+  const txt = $('employeesText').value.trim();
+  const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+  const arr = lines.map(line=>{
+    const parts = line.split("-");
+    const name = (parts[0]||"").trim();
+    const machine = (parts[1]||"").trim();
+    return {name, machine};
+  });
+  employees = arr;
+  localStorage.setItem(KEY_EMPLOYEES, JSON.stringify(employees));
+  renderEmployeesSidebar();
+  populateAllRowSelects();
+  alert("تم حفظ الموظفين والمكن");
+  closeSettings();
+}
+function closeSettings(){ $('settings').classList.add('hidden'); }
+
+function renderEmployeesSidebar(){
+  employees = JSON.parse(localStorage.getItem(KEY_EMPLOYEES) || "[]");
+  const container = $('empList');
+  if(!employees || employees.length===0){
+    container.innerHTML = "<p class='small'>لم يتم إضافة موظفين بعد. اضغط تعديل الموظفين لإضافة.</p>";
+    return;
+  }
+  container.innerHTML = employees.map(e => `<div style="margin-bottom:6px">👤 <strong>${escapeHtml(e.name)}</strong><br><span class="small">مكن: ${escapeHtml(e.machine)}</span></div>`).join("");
+}
+
+/* Table functions */
+function addRow(rowData){
+  const tbody = $('tableBody');
+  rowCount++;
+  const tr = document.createElement('tr');
+  tr.dataset.row = rowCount;
+  // options
+  let machineOptions = `<option value="">-- اختر المكنة --</option>`;
+  employees.forEach(e => machineOptions += `<option value="${escapeHtml(e.machine)}">${escapeHtml(e.machine)}</option>`);
+  let employeeOptions = `<option value="">-- اختر الموظف --</option>`;
+  employees.forEach(e => employeeOptions += `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`);
+  let inner = `<td>${rowCount}</td>`;
+  inner += `<td><select class="cell-machine" onchange="onCellChange(this)">${machineOptions}</select></td>`;
+  inner += `<td><select class="cell-employee" onchange="onCellChange(this)">${employeeOptions}</select></td>`;
+  ACCS.forEach(ac=>{
+    inner += `<td><input type="number" min="0" class="input-count" data-acc="${ac.key}" oninput="onCellChange(this)" style="width:90px"></td>`;
+    inner += `<td><input type="number" min="0" step="0.01" class="input-amount" data-acc="${ac.key}" oninput="onCellChange(this)" style="width:90px"></td>`;
+  });
+  tr.innerHTML = inner;
+  tbody.appendChild(tr);
+  if(rowData){
+    if(rowData.machine) tr.querySelector('.cell-machine').value = rowData.machine;
+    if(rowData.name) tr.querySelector('.cell-employee').value = rowData.name;
+    ACCS.forEach(ac=>{
+      const c = rowData.counts && rowData.counts[ac.key] ? rowData.counts[ac.key].count : 0;
+      const m = rowData.counts && rowData.counts[ac.key] ? rowData.counts[ac.key].amount : 0;
+      tr.querySelector(`.input-count[data-acc="${ac.key}"]`).value = c || "";
+      tr.querySelector(`.input-amount[data-acc="${ac.key}"]`).value = m || "";
+    });
+  }
+  updateFooterTotals();
+}
+
+function populateAllRowSelects(){
+  document.querySelectorAll('#tableBody tr').forEach(tr=>{
+    const machineSel = tr.querySelector('.cell-machine');
+    const empSel = tr.querySelector('.cell-employee');
+    if(!machineSel || !empSel) return;
+    const prevMachine = machineSel.value;
+    const prevEmp = empSel.value;
+    let machineOptions = `<option value="">-- اختر المكنة --</option>`;
+    employees.forEach(e => machineOptions += `<option value="${escapeHtml(e.machine)}">${escapeHtml(e.machine)}</option>`);
+    let employeeOptions = `<option value="">-- اختر الموظف --</option>`;
+    employees.forEach(e => employeeOptions += `<option value="${escapeHtml(e.name)}">${escapeHtml(e.name)}</option>`);
+    machineSel.innerHTML = machineOptions;
+    empSel.innerHTML = employeeOptions;
+    machineSel.value = prevMachine;
+    empSel.value = prevEmp;
+  });
+}
+
+function onCellChange(){ updateFooterTotals(); }
+
+function updateFooterTotals(){
+  const sums = {};
+  ACCS.forEach(ac => sums[ac.key] = {count:0, amount:0});
+  document.querySelectorAll('#tableBody tr').forEach(tr=>{
+    ACCS.forEach(ac=>{
+      const cEl = tr.querySelector(`.input-count[data-acc="${ac.key}"]`);
+      const mEl = tr.querySelector(`.input-amount[data-acc="${ac.key}"]`);
+      const c = parseFloat(cEl?.value) || 0;
+      const mm = parseFloat(mEl?.value) || 0;
+      sums[ac.key].count += c;
+      sums[ac.key].amount += mm;
+    });
+  });
+  $('sum_20_count').innerText = sums['20'].count || 0;
+  $('sum_20_amount').innerText = round2(sums['20'].amount);
+  $('sum_36_count').innerText = sums['36'].count || 0;
+  $('sum_36_amount').innerText = round2(sums['36'].amount);
+  $('sum_67_count').innerText = sums['67'].count || 0;
+  $('sum_67_amount').innerText = round2(sums['67'].amount);
+  $('sum_3_20_count').innerText = sums['3_20'].count || 0;
+  $('sum_3_20_amount').innerText = round2(sums['3_20'].amount);
+  $('sum_20_6_count').innerText = sums['20_6'].count || 0;
+  $('sum_20_6_amount').innerText = round2(sums['20_6'].amount);
+  $('sum_buy_count').innerText = sums['buy'].count || 0;
+  $('sum_buy_amount').innerText = round2(sums['buy'].amount);
+  let grand = 0;
+  ACCS.forEach(ac => grand += sums[ac.key].amount);
+  $('grand_total').innerText = round2(grand);
+
+  // today totals per UI (sum of current table)
+  let totalOps = 0, totalMoney = 0;
+  ACCS.forEach(ac => { totalOps += sums[ac.key].count; totalMoney += sums[ac.key].amount; });
+  $('today_ops').innerText = Math.round(totalOps);
+  $('today_money').innerText = round2(totalMoney);
+}
+
+/* collect rows */
+function collectCurrentRows(){
+  const dataRows = [];
+  document.querySelectorAll('#tableBody tr').forEach(tr=>{
+    const machine = tr.querySelector('.cell-machine')?.value || "";
+    const name = tr.querySelector('.cell-employee')?.value || "";
+    const counts = {};
+    ACCS.forEach(ac=>{
+      const c = parseFloat(tr.querySelector(`.input-count[data-acc="${ac.key}"]`)?.value) || 0;
+      const m = parseFloat(tr.querySelector(`.input-amount[data-acc="${ac.key}"]`)?.value) || 0;
+      counts[ac.key] = {count: c, amount: m};
+    });
+    dataRows.push({machine,name,counts});
+  });
+  return dataRows;
+}
+
+/* save day */
+function saveDay(){
+  const date = $('dateInput').value;
+  if(!date) return alert("اختر التاريخ أولاً");
+  const rows = collectCurrentRows();
+  records[date] = {rows, savedAt: new Date().toISOString()};
+  localStorage.setItem(KEY_RECORDS, JSON.stringify(records));
+  populateDaySelect();
+  updateAllSummaries();
+  alert("تم حفظ اليوم: " + date);
+}
+
+/* populate day select */
+function populateDaySelect(){
+  const sel = $('daySelect');
+  sel.innerHTML = `<option value="">-- اختر يوم محفوظ --</option>`;
+  const keys = Object.keys(records).sort((a,b)=>b.localeCompare(a));
+  keys.forEach(k=>{
+    const opt = document.createElement('option'); opt.value = k; opt.textContent = k; sel.appendChild(opt);
+  });
+}
+
+/* load day */
+function loadDay(date){
+  if(!date) return;
+  const rec = records[date];
+  $('tableBody').innerHTML = ""; rowCount = 0;
+  if(rec && rec.rows && rec.rows.length){
+    rec.rows.forEach(r => addRow(r));
+  } else {
+    const cnt = Math.max(1, employees.length || 1);
+    for(let i=0;i<cnt;i++) addRow();
+  }
+  updateFooterTotals();
+}
+
+/* load from selector */
+function loadDayFromSelect(){ const date = $('daySelect').value; if(!date) return; $('dateInput').value = date; loadDay(date); }
+
+/* date input change */
+document.addEventListener('change', function(e){ if(e.target && e.target.id === 'dateInput'){ const v = e.target.value; if(v) loadDay(v); }});
+
+/* printDay - formatted like paper + signatures */
+function printDay(){
+  const date = $('dateInput').value;
+  if(!date) return alert("اختر التاريخ للطباعة");
+  updateFooterTotals();
+  // build print table similar to on-screen but narrower styles matching paper
+  const tbodyRows = Array.from(document.querySelectorAll('#tableBody tr')).map(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td => td.outerHTML);
+    return `<tr>${cells.join('')}</tr>`;
+  }).join('');
+  const headerHtml = `
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>اسم المكنة</th><th>اسم الموظف</th>
+          <th>20 عدد</th><th>20 جنيه</th>
+          <th>36/6 عدد</th><th>36/6 جنيه</th>
+          <th>67 عدد</th><th>67 جنيه</th>
+          <th>3/20 عدد</th><th>3/20 جنيه</th>
+          <th>20/6 عدد</th><th>20/6 جنيه</th>
+          <th>مشتريات عدد</th><th>مشتريات جنيه</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tbodyRows}
+      </tbody>
+    </table>
+  `;
+  // footer totals row
+  const totalsRow = document.querySelector('tfoot').outerHTML;
+  const empHtml = employees.length ? employees.map(e=>`<div>👤 ${escapeHtml(e.name)} — مكن: ${escapeHtml(e.machine)}</div>`).join("") : "<div>لا موظفين مسجلين</div>";
+  const html = `
+  <!doctype html>
+  <html lang="ar" dir="rtl">
+  <head><meta charset="utf-8"><title>تقرير ${escapeHtml(date)}</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;direction:rtl;padding:12px;color:#111}
+    h1{text-align:center;margin:0 0 6px}
+    .office{text-align:center;font-weight:700;margin-bottom:6px}
+    table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px}
+    th,td{border:1px solid #333;padding:6px;text-align:center}
+    th{background:#000;color:#fff}
+    .sums{margin-top:10px;font-weight:700}
+    .signs{margin-top:30px;display:flex;justify-content:space-between;gap:12px}
+    .sign-line{width:32%;border-top:1px solid #333;padding-top:6px;text-align:center}
+  </style>
+  </head>
+  <body>
+    <h1>تقرير يومي</h1>
+    <div class="office">${escapeHtml(OFFICE_NAME)}</div>
+    <div style="text-align:center">📅 التاريخ: <strong>${escapeHtml(date)}</strong></div>
+    ${headerHtml}
+    ${totalsRow}
+    <div class="sums">الإجمالي العام: <strong>${escapeHtml($('grand_total').innerText || '0')}</strong> جنيه</div>
+    <div style="margin-top:12px">
+      <h4>الموظفون و أرقام المكن</h4>
+      ${empHtml}
+    </div>
+    <div class="signs">
+      <div class="sign-line">توقيع الصراف</div>
+      <div class="sign-line">توقيع المراجع</div>
+      <div class="sign-line">التاريخ</div>
+    </div>
+  </body>
+  </html>
+  `;
+  const w = window.open('','_blank');
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(()=>w.print(),300);
+}
+
+/* delete older than 90 days */
+function deleteOlderThan90(){
+  if(!confirm("هل تريد مسح كل البيانات الأقدم من 90 يومًا؟")) return;
+  const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+  let changed = false;
+  Object.keys(records).forEach(date => {
+    const rec = records[date];
+    let savedAt = rec && rec.savedAt ? Date.parse(rec.savedAt) : Date.parse(date);
+    if(!savedAt) savedAt = Date.parse(date);
+    if(savedAt < cutoff){ delete records[date]; changed = true; }
+  });
+  if(changed){
+    localStorage.setItem(KEY_RECORDS, JSON.stringify(records));
+    populateDaySelect();
+    alert("تم حذف البيانات الأقدم من 3 شهور");
+  } else alert("لا توجد بيانات أقدم من 3 شهور");
+  updateAllSummaries();
+}
+
+/* reset all (clear everything) */
+function resetAll(){
+  if(!confirm("هل تريد مسح كل البيانات؟ هذا سيمسح جميع الأيام والموظفين!")) return;
+  localStorage.removeItem(KEY_RECORDS);
+  localStorage.removeItem(KEY_EMPLOYEES);
+  records = {}; employees = [];
+  populateDaySelect(); renderEmployeesSidebar();
+  $('tableBody').innerHTML = ""; rowCount = 0; addRow(); updateFooterTotals(); updateAllSummaries();
+  alert("تم المسح");
+}
+
+/* collect totals across records */
+function computeAggregates(){
+  // returns {all:{ops,money}, last30:{ops,money}, last90:{ops,money}}
+  const agg = {all:{ops:0,money:0}, last30:{ops:0,money:0}, last90:{ops:0,money:0}};
+  const now = Date.now();
+  const recKeys = Object.keys(records);
+  recKeys.forEach(date => {
+    const rec = records[date];
+    const when = rec && rec.savedAt ? Date.parse(rec.savedAt) : Date.parse(date);
+    // compute totals for that day
+    let dayOps = 0, dayMoney = 0;
+    if(rec && rec.rows){
+      rec.rows.forEach(r=>{
+        ACCS.forEach(ac=>{
+          const c = r.counts && r.counts[ac.key] ? Number(r.counts[ac.key].count) || 0 : 0;
+          const m = r.counts && r.counts[ac.key] ? Number(r.counts[ac.key].amount) || 0 : 0;
+          dayOps += c;
+          dayMoney += m;
+        });
+      });
+    }
+    agg.all.ops += dayOps; agg.all.money += dayMoney;
+    if(now - when <= 30*24*60*60*1000){ agg.last30.ops += dayOps; agg.last30.money += dayMoney; }
+    if(now - when <= 90*24*60*60*1000){ agg.last90.ops += dayOps; agg.last90.money += dayMoney; }
+  });
+  // round money
+  agg.all.money = round2(agg.all.money);
+  agg.last30.money = round2(agg.last30.money);
+  agg.last90.money = round2(agg.last90.money);
+  return agg;
+}
+
+/* update all summaries displayed */
+function updateAllSummaries(){
+  records = JSON.parse(localStorage.getItem(KEY_RECORDS) || "{}");
+  employees = JSON.parse(localStorage.getItem(KEY_EMPLOYEES) || "[]");
+  const agg = computeAggregates();
+  $('all_ops').innerText = Math.round(agg.all.ops);
+  $('all_money').innerText = agg.all.money;
+  $('last30_ops').innerText = Math.round(agg.last30.ops);
+  $('last30_money').innerText = agg.last30.money;
+  $('last90_ops').innerText = Math.round(agg.last90.ops);
+  $('last90_money').innerText = agg.last90.money;
+  // quick summary on side
+  $('quickSummary').innerHTML = `
+    <div>أيام محفوظة: <b>${Object.keys(records).length}</b></div>
+    <div>إجمالي العمليات (كل الأيام): <b>${Math.round(agg.all.ops)}</b></div>
+    <div>إجمالي مبالغ (كل الأيام): <b>${agg.all.money} جنيه</b></div>
+  `;
+}
+
+/* utilities */
+function escapeHtml(s){ return String(s || "").replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+function round2(v){ return Math.round((v + Number.EPSILON) * 100) / 100; }
+
+/* expose some functions globally */
+window.addRow = addRow;
+window.saveDay = saveDay;
+window.printDay = printDay;
+window.resetAll = resetAll;
+window.openSettings = openSettings;
+window.openSettingsEditor = openSettingsEditor;
+window.saveEmployees = saveEmployees;
+window.closeSettings = closeSettings;
+window.loadDayFromSelect = loadDayFromSelect;
+window.logout = logout;
+window.deleteOlderThan90 = deleteOlderThan90;
+window.doLogin = doLogin;
+
+/* ensure that when app is visible we have at least one row */
+(function ensureRowWhenVisible(){
+  const obs = new MutationObserver(()=> {
+    if(!document.querySelector('#app').classList.contains('hidden')){
+      if(document.querySelectorAll('#tableBody tr').length === 0) addRow();
+      obs.disconnect();
+    }
+  });
+  obs.observe(document.body, {childList:true, subtree:true});
+})();
+</script>
+
+</body>
+</html>
